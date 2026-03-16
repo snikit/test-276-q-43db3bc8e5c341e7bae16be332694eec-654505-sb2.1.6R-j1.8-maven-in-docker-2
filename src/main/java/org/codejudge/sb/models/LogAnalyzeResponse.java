@@ -1,6 +1,5 @@
 package org.codejudge.sb.models;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,7 +13,9 @@ public class LogAnalyzeResponse {
   private List<FileParseResult> response;
   private List<FileError> errors;
 
-  public static LogAnalyzeResponse toResponse(Map<TimeRange, Map<ExceptionKey, Long>> parsed) {
+  public static LogAnalyzeResponse toResponse(
+      Map<TimeRange, Map<ExceptionKey, Long>> parsed,
+      List<FileError> errors) {
     List<LogAnalyzeResponse.FileParseResult> results = parsed.entrySet().stream()
         .map(entry -> {
           String timestamp = entry.getKey().range(); // e.g. "2018-04-14 15:15-15:30"
@@ -25,7 +26,7 @@ public class LogAnalyzeResponse {
         })
         .collect(Collectors.toList());
 
-    return new LogAnalyzeResponse(results, Collections.emptyList());
+    return new LogAnalyzeResponse(results, errors);
   }
 
   public record FileParseResult(String timestamp, List<ExceptionLog> logs) {

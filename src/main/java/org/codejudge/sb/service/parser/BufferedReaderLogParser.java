@@ -24,9 +24,14 @@ public class BufferedReaderLogParser implements LogParser {
       "^(\\d+)\\s+(\\d+)\\s+([\\w$.]+Exception[\\w$.]*)$");
 
   public Map<TimeRange, Map<ExceptionKey, Long>> parse(String filePath) throws IOException {
-    URLConnection connection = URI.create(filePath).toURL().openConnection();
-    connection.setConnectTimeout(5_000);  // 5s to establish connection
-    connection.setReadTimeout(30_000);    // 30s to read data
+    final URLConnection connection;
+    try {
+      connection = URI.create(filePath).toURL().openConnection();
+    } catch (IllegalArgumentException | java.net.MalformedURLException ex) {
+      throw new IOException("Invalid or unsupported file URL [" + filePath + "]: " + ex.getMessage(), ex);
+    }
+    connection.setConnectTimeout(5_000); // 5s to establish connection
+    connection.setReadTimeout(30_000); // 30s to read data
 
     try (BufferedReader reader = new BufferedReader(
         new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
@@ -39,9 +44,7 @@ public class BufferedReaderLogParser implements LogParser {
               m -> bucketToQuarterHour(Long.parseLong(m.group(2))),
               Collectors.groupingBy(
                   m -> new ExceptionKey(m.group(3)),
-                  Collectors.counting()
-              )
-          ));
+                  Collectors.counting())));
     }
   }
 
@@ -51,7 +54,7 @@ public class BufferedReaderLogParser implements LogParser {
     LocalDateTime dt = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
 
     int minute = dt.getMinute();
-    int bucketStart = (minute / 15) * 15;   // floor to 0, 15, 30, or 45
+    int bucketStart = (minute / 15) * 15; // floor to 0, 15, 30, or 45
     int bucketEnd = bucketStart + 15;
 
     return new TimeRange(

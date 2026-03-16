@@ -24,18 +24,19 @@ public class ResultAggregator {
         ).toList();
 
     Map<TimeRange, Map<ExceptionKey, Long>> aggregator = fileResults.stream()
+        .filter(r -> !r.hasError()) // skip error results — entries map is empty but guard explicitly
         .map(FileResult::entries)
+        .filter(map -> map != null && !map.isEmpty()) // null-safe guard
         .flatMap(map -> map.entrySet().stream()).collect(
             Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (innerMap1, innerMap2) -> {
-                  // Merge inner maps on key collision — sum the counts
-                  Map<ExceptionKey, Long> merged = new HashMap<>(innerMap1);
-                  innerMap2.forEach((ex, count) -> merged.merge(ex, count, Long::sum));
-                  return merged;
-                },
+              // Merge inner maps on key collision — sum the counts
+              Map<ExceptionKey, Long> merged = new HashMap<>(innerMap1);
+              innerMap2.forEach((ex, count) -> merged.merge(ex, count, Long::sum));
+              return merged;
+            },
                 () -> new TreeMap<>(
-                    Comparator.comparing(t -> LocalTime.parse(t.range().split("-")[0])))
-            ));
+                    Comparator.comparing(t -> LocalTime.parse(t.range().split("-")[0])))));
 
-    return LogAnalyzeResponse.toResponse(aggregator);
+    return LogAnalyzeResponse.toResponse(aggregator, errors);
   }
 }
